@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 )
 
@@ -49,4 +50,11 @@ func main() {
 	if env.Environment == development {
 		logger.Info("successfully loaded env vars", zap.Any("configuration", env))
 	}
+
+	conn, err := amqp.Dial(env.BrokerDSN)
+	if err != nil {
+		logger.Fatal("failed connecting to rabbitmq", zap.Error(err))
+	}
+
+	_ = conn
 }
