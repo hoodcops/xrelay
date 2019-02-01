@@ -11,8 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hoodcops/xrelay/pkg/api"
-
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -66,18 +64,20 @@ func main() {
 		logger.Fatal("failed connecting to rabbitmq", zap.Error(err))
 	}
 
+	_ = conn
+
 	listener, err := net.Listen("tcp4", fmt.Sprintf(":%d", env.Port))
 	if err != nil {
 		logger.Fatal("failed binding to port", zap.Int("port", env.Port))
 	}
 	defer listener.Close()
 
-	routes := api.InitRoutes(logger, conn)
+	// routes := api.InitRoutes(logger, conn)
 	server := http.Server{
 		ReadHeaderTimeout: 30 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
-		Handler:           routes,
+		Handler:           nil,
 	}
 
 	sigs := make(chan os.Signal, 1)
