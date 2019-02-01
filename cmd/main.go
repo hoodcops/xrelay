@@ -1,7 +1,15 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
@@ -57,4 +65,47 @@ func main() {
 	}
 
 	_ = conn
+
+	listener, err := net.Listen("tcp4", fmt.Sprintf(":%d", env.Port))
+	if err != nil {
+		logger.Fatal("failed binding to port", zap.Int("port", env.Port))
+	}
+	defer listener.Close()
+
+	server := http.Server{
+		ReadHeaderTimeout: 30 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		Handler:           nil,
+	}
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
+
+	connsClosed := make(chan struct{})
+	go func() {
+		defer close(connsClosed)
+
+		recv := <-sigs
+		logger.Info("received signal, shutting down", zap.Any("signal", recv.String()))
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(ctx); err != nil {
+			logger.Fatal("failed shutting down server", zap.Error(err))
+		}
+	}()
+
+	url := fmt.Sprintf("http://%s", listener.Addr())
+	logger.Info("server listening on ", zap.String("url", url))
+
+	if err = server.Serve(listener); err != nil {
+		if err != http.ErrServerClosed {
+			logger.Fatal("failed starting server", zap.Error(err))
+		}
+	}
+
+	<-connsClosed
+	logger.Info("server shutdown successfully")
 }
