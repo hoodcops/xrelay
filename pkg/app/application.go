@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hoodcops/xrelay/pkg/config"
+	"github.com/hoodcops/xrelay/pkg/workers"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 )
@@ -30,19 +31,26 @@ func NewApp(brokerConn *amqp.Connection, config *config.Config, logger *zap.Logg
 	}
 }
 
+// InitWorkers initializes workers for various async
+// tasks performed in response to messages received
+func (a *App) InitWorkers() {
+	verificationWorker := workers.NewVerificationWorker(a.brokerConn, a.logger)
+	verificationWorker.Run()
+}
+
 // Run boots the service
-func (s *App) Run(ctx context.Context) {
-	s.logger.Info("starting service")
+func (a *App) Run(ctx context.Context) {
+	a.logger.Info("starting service")
 
 	srv := &http.Server{
 		Handler: nil,
-		Addr:    fmt.Sprintf(":%d", s.config.Port),
+		Addr:    fmt.Sprintf(":%d", a.config.Port),
 	}
 
 	go func() {
 		err := srv.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			s.logger.Fatal("http server error occured", zap.Error(err))
+			a.logger.Fatal("http server error occured", zap.Error(err))
 		}
 	}()
 
@@ -50,14 +58,14 @@ func (s *App) Run(ctx context.Context) {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	recv := <-sigs
 
-	s.logger.Info("signal received, shutting down server", zap.String("signal", recv.String()))
+	a.logger.Info("signal received, shutting down server", zap.String("signal", recv.String()))
 
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		s.logger.Warn("error shutting down server", zap.Error(err))
+		a.logger.Warn("error shutting down server", zap.Error(err))
 	}
 
-	s.logger.Info("service shutdown successfully")
+	a.logger.Info("service shutdown successfully")
 }

@@ -50,6 +50,9 @@ func main() {
 	logger.Info("connected to broker successfully")
 
 	app := app.NewApp(conn, &confs, logger)
+	// initialize workers
+	app.InitWorkers()
+	// run service
 	app.Run(context.Background())
 
 }
