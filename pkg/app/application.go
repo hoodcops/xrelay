@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"context"
@@ -14,24 +14,24 @@ import (
 	"go.uber.org/zap"
 )
 
-// Server ...
-type Server struct {
+// App represents application dependencies
+type App struct {
 	brokerConn *amqp.Connection
 	config     *config.Config
 	logger     *zap.Logger
 }
 
-// NewServer ...
-func NewServer(brokerConn *amqp.Connection, config *config.Config, logger *zap.Logger) *Server {
-	return &Server{
+// NewApp returns a new App
+func NewApp(brokerConn *amqp.Connection, config *config.Config, logger *zap.Logger) *App {
+	return &App{
 		brokerConn: brokerConn,
 		config:     config,
 		logger:     logger,
 	}
 }
 
-// Run ...
-func (s *Server) Run(ctx context.Context) {
+// Run boots the service
+func (s *App) Run(ctx context.Context) {
 	s.logger.Info("starting service")
 
 	srv := &http.Server{

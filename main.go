@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/hoodcops/xrelay/pkg/app"
 	"github.com/hoodcops/xrelay/pkg/config"
-	"github.com/hoodcops/xrelay/pkg/server"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -49,7 +49,7 @@ func main() {
 	}
 	logger.Info("connected to broker successfully")
 
-	srv := server.NewServer(conn, &confs, logger)
-	srv.Run(context.Background())
+	app := app.NewApp(conn, &confs, logger)
+	app.Run(context.Background())
 
 }
